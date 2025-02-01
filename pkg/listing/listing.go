@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okaaryanata/public-api/helper"
 	"github.com/okaaryanata/public-api/internal/domain"
 )
 
 const (
-	listingSvcGetListings   = "/listings"
-	listingSvcCreateListing = "/listings"
+	pathListing = "/listings"
 )
 
 type (
@@ -36,7 +36,7 @@ func NewListingClient(baseURL string) *ListingClient {
 	}
 }
 
-func (c *ListingClient) GetListings(ctx context.Context, args *domain.GetListingsArgs) ([]domain.ListingResponse, error) {
+func (c *ListingClient) GetListings(ctx context.Context, args *domain.GetListingsArgs) ([]domain.ClientListingResponse, error) {
 	queryUserID := ""
 	if args.UserID > 0 {
 		queryUserID = fmt.Sprintf("&user_id=%d", args.UserID)
@@ -50,7 +50,7 @@ func (c *ListingClient) GetListings(ctx context.Context, args *domain.GetListing
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s?page_num=%d&page_size=%d%s",
 		c.url,
-		listingSvcGetListings,
+		pathListing,
 		args.Page,
 		args.Size,
 		queryUserID,
@@ -65,18 +65,21 @@ func (c *ListingClient) GetListings(ctx context.Context, args *domain.GetListing
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error occur when get listing with status code: %d", resp.StatusCode)
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading the response body:", err)
 		return nil, fmt.Errorf("error occur when read resp body (detail: %s)", err.Error())
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var respErr domain.ErrorMessage
+		json.Unmarshal(body, &respErr)
+		err = helper.ConverErrors(respErr.Errors, fmt.Sprintf("error occur when get listing with status code: %d", resp.StatusCode))
+
+		return nil, err
+	}
+
 	type GetListingResp struct {
-		Listings []domain.ListingResponse `json:"listings"`
+		Listings []domain.ClientListingResponse `json:"listings"`
 	}
 
 	var resBody GetListingResp
@@ -88,13 +91,13 @@ func (c *ListingClient) GetListings(ctx context.Context, args *domain.GetListing
 	return resBody.Listings, nil
 }
 
-func (c *ListingClient) CreateListing(ctx context.Context, args *domain.CreateListingArgs) (*domain.ListingResponse, error) {
+func (c *ListingClient) CreateListing(ctx context.Context, args *domain.CreateListingArgs) (*domain.ClientListingResponse, error) {
 	formData := url.Values{}
 	formData.Set("user_id", strconv.Itoa(args.UserID))
 	formData.Set("listing_type", args.Type)
 	formData.Set("price", strconv.Itoa(int(args.Price)))
 
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", c.url, listingSvcGetListings), strings.NewReader(formData.Encode()))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s%s", c.url, pathListing), strings.NewReader(formData.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -106,18 +109,21 @@ func (c *ListingClient) CreateListing(ctx context.Context, args *domain.CreateLi
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error occur while create listing with status code: %d", resp.StatusCode)
-	}
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading the response body:", err)
 		return nil, fmt.Errorf("error occur when read resp body (detail: %s)", err.Error())
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var respErr domain.ErrorMessage
+		json.Unmarshal(body, &respErr)
+		err = helper.ConverErrors(respErr.Errors, fmt.Sprintf("error occur when create listing with status code: %d", resp.StatusCode))
+
+		return nil, err
+	}
+
 	type CreateListingResp struct {
-		Listing domain.ListingResponse `json:"listing"`
+		Listing *domain.ClientListingResponse `json:"listing"`
 	}
 
 	var resBody CreateListingResp
@@ -126,5 +132,5 @@ func (c *ListingClient) CreateListing(ctx context.Context, args *domain.CreateLi
 		return nil, errors.New("failed unmarshal response")
 	}
 
-	return &resBody.Listing, nil
+	return resBody.Listing, nil
 }

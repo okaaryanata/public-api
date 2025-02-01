@@ -12,7 +12,7 @@ type (
 	}
 )
 
-func NewUserController(listingSvc *service.ListingService) *Controller {
+func NewListingController(listingSvc *service.ListingService) *Controller {
 	return &Controller{
 		listingSvc: listingSvc,
 	}

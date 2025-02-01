@@ -58,11 +58,11 @@ func (c *Controller) GetListings(ctx *gin.Context) {
 
 	userID, err := strconv.Atoi(ctx.DefaultQuery("user_id", "0"))
 	if err != nil || pageSize < 1 {
-		ctx.JSON(http.StatusBadRequest, gin.H{"result": false, "error": "Invalid page_size"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"result": false, "error": "Invalid user_id"})
 		return
 	}
 
-	users, err := c.listingSvc.GetListings(ctx, &domain.GetListingsArgs{
+	listings, err := c.listingSvc.GetListings(ctx, &domain.GetListingsArgs{
 		UserID: userID,
 		PaginationArgs: domain.PaginationArgs{
 			Page: pageNum,
@@ -74,5 +74,5 @@ func (c *Controller) GetListings(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"result": true, "users": users})
+	ctx.JSON(http.StatusOK, gin.H{"result": true, "listings": listings})
 }

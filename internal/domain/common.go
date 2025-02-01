@@ -9,4 +9,8 @@ type (
 		Page int
 		Size int
 	}
+
+	ErrorMessage struct {
+		Errors interface{} `json:"errors"`
+	}
 )

@@ -11,10 +11,12 @@ import (
 	"github.com/okaaryanata/public-api/internal/api/health"
 	"github.com/okaaryanata/public-api/internal/api/listing"
 	"github.com/okaaryanata/public-api/internal/api/middleware"
+	"github.com/okaaryanata/public-api/internal/api/user"
 	"github.com/okaaryanata/public-api/internal/app"
 	"github.com/okaaryanata/public-api/internal/domain"
 	"github.com/okaaryanata/public-api/internal/service"
 	listingClient "github.com/okaaryanata/public-api/pkg/listing"
+	userClient "github.com/okaaryanata/public-api/pkg/user"
 )
 
 func main() {
@@ -30,14 +32,17 @@ func startService() {
 	app.InitService()
 
 	// Packages
+	userClient := userClient.NewUserClient(os.Getenv("URL_USER"))
 	listingClient := listingClient.NewListingClient(os.Getenv("URL_LISTING"))
 
 	// Services
-	listingSvc := service.NewListingService(listingClient)
+	userSvc := service.NewUserService(userClient)
+	listingSvc := service.NewListingService(userSvc, listingClient)
 
 	// Controllers
 	healthController := health.NewHealthController()
-	listingController := listing.NewUserController(listingSvc)
+	userController := user.NewUserController(userSvc)
+	listingController := listing.NewListingController(listingSvc)
 
 	// Create main route
 	router := gin.New()
@@ -53,6 +58,7 @@ func startService() {
 	// Register routes
 	healthController.RegisterRoutes(mainRoute)
 	listingController.RegisterRoutes(mainRoute)
+	userController.RegisterRoutes(mainRoute)
 
 	host := fmt.Sprintf("%s:%s", app.Host, app.Port)
 	router.Run(host)
